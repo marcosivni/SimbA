@@ -1,0 +1,37 @@
+SELECT dado FROM tabela
+SELECT dado FROM tabela t
+SELECT dado FROM tabela, tabela2
+SELECT dado FROM (SELECT dado FROM tabela2) t
+SELECT dado FROM (SELECT dado FROM tabela2) AS t
+SELECT dado FROM tabela t1 JOIN tabela t2 ON t1.dado=t2.dado
+SELECT dado FROM tabela t1 JOIN tabela t2 ON t1.dado=t2.dado JOIN tabela t3 ON t1.dado=t3.dado JOIN tabela t4 ON t1.dado=t4.dado JOIN tabela t5 ON t5.dado = t1.dado JOIN tabela t6 ON t6.dado=t1.dado JOIN tabela t7 ON t7.dado=t1.dado 
+SELECT dado FROM tabela t1 JOIN tabela t2 ON t1.dado=t2.dado JOIN tabela t3 ON t1.dado=t3.dado JOIN tabela t4 ON t1.dado=t4.dado JOIN tabela t5 ON t5.dado = t1.dado JOIN tabela t6 ON t6.dado>=t1.dado JOIN tabela t7 ON t7.dado<>t1.dado JOIN (SELECT dado FROM Tabela t) t8 ON t8.dado=t1.dado 
+SELECT imagem FROM exame e1 CLOSEST JOIN exame e2 ON e1.imagem NEAR e2.imagem BY histograma STOP AFTER 3 
+SELECT imagem FROM exame e1 CLOSEST JOIN exame e2 ON e1.imagem NEAR e2.imagem BY histograma STOP AFTER 3 NEAREST JOIN exame e3 ON e1.imagem NEAR e3.imagem BY histograma STOP AFTER 4 
+SELECT t1.dado FROM t1 t2 JOIN t1 ON t2.id = t1.id
+SELECT t1.dado FROM t1, t1 tabela1 WHERE t1.abc = tabela1.asd
+SELECT t1.dado AS tdado, t2.dado tdado2 FROM t1, t2 
+SELECT t1.dado FROM t1 tabela1, t1
+SELECT t1.dado FROM t1 t2, t1 tabela1
+SELECT t1.dado FROM t1, t1 tabela1, t2 
+SELECT t1.id FROM t1 JOIN tabela2 t2 ON t1.id=t2.id WHERE abc = asd
+SELECT t1.id, t2.id, t3.id FROM t1 JOIN tabela2 t2 ON t1.id=t2.id, t3 WHERE abc = asd
+SELECT t1.id FROM t4, t1 JOIN tabela2 t2 ON t1.id=t2.id, tabela3 AS t3 WHERE abc = asd
+SELECT t1.id, COUNT(*), AVG(t2.id) FROM t1 JOIN tabela2 t2 ON t1.id=t2.id, tabela3 AS t3 WHERE t1.abc = t2.acb AND t2.acb > 10 
+SELECT t1.id, COUNT(*), AVG(t2.id) FROM t1 JOIN tabela2 t2 ON t1.id=t2.id, tabela3 AS t3 WHERE t1.abc = t2.acb AND t2.acb > 10 GROUP BY (t1.id, t2.id) 
+SELECT t1.id, COUNT(*), AVG(t2.id) FROM t1 JOIN tabela2 t2 ON t1.id=t2.id, tabela3 AS t3 WHERE t1.abc = t2.acb AND t2.acb > 10 GROUP BY (t1.id, t2.id) HAVING COUNT(*) > 10 AND AVG(t2.id) < 100  
+SELECT t1.id, COUNT(*), AVG(t2.id) FROM t1 JOIN tabela2 t2 ON t1.id=t2.id, tabela3 AS t3 WHERE t1.abc = t2.acb AND t2.acb > 10 GROUP BY (t1.id, t2.id) HAVING COUNT(*) > 10 AND AVG(t2.id) < 100 ORDER BY t1.id ASC 
+SELECT t1.id, COUNT(*), AVG(t2.id) FROM t1 JOIN tabela2 t2 ON t1.id=t2.id, tabela3 AS t3 WHERE t1.abc = t2.acb AND t2.acb > 10 GROUP BY (t1.id, t2.id) HAVING COUNT(*) > 10 AND AVG(t2.id) < 100 ORDER BY t1.id, t2.id DESC 
+SELECT t1.id, COUNT(*), AVG(t2.id) FROM t1 JOIN tabela2 t2 ON t1.id=t2.id JOIN tabela3 t3 ON t3.id=t2.id WHERE t1.abc = t2.acb AND t2.acb > 10 GROUP BY (t1.id, t2.id) HAVING COUNT(*) > 10 AND AVG(t2.id) < 100 ORDER BY t1.id, t2.id 
+SELECT t1.id FROM t1, t2, t3, t4 WHERE t1.abc = t2.acb AND t3.id = t4.id 
+SELECT c1, t1.c2 FROM (SELECT * FROM t3 JOIN t4 on t3.id = t4.id WHERE a = b) t1 JOIN t2 ON t1.a = t2.a 
+SELECT c1, t1.c2 FROM t1 JOIN (SELECT * FROM t3 JOIN t4 on t3.id = t4.id WHERE a = b) t2 ON t1.a = t2.a 
+SELECT * FROM t1 JOIN t2 ON t1.id = bleh WHERE abc BETWEEN 'asdf' AND 'bleh' 
+SELECT * FROM t1 JOIN t2 ON t1.id = bleh WHERE abc NOT IN ( 11, 12, 13, 14, 11.4 ) AND abc BETWEEN 15 AND 34 
+SELECT * FROM t1 JOIN t2 ON t1.id = bleh WHERE abc NOT IN ( SELECT c1 FROM t1 JOIN t2 ON t1.id = t2.id ) AND abc BETWEEN 15 AND 34 
+SELECT * FROM t1, t2 WHERE abc IN ( SELECT c1 FROM t1 JOIN t2 ON t1.id = t2.id ) 
+SELECT t.dado FROM t1 JOIN Tabela2 t2 ON t1.a = t2.a CLOSEST JOIN Tabela4 ON Tabela4.c1 NEAR t2.c1 STOP AFTER 5 WHERE t1.s1 NEAR ALL '/home/dataset/img.jpg' BY histograma STOP AFTER 3 WITH TIE LIST AND t2.s2 FAR ALL '/home/dataset/img.jpg' RANGE 5 
+SELECT t1.dado d1, t2.dado d2 FROM t1 JOIN Tabela2 t2 ON t1.a = t2.a RANGE JOIN Tabela3 t3 ON t3.c1 NEAR t1.c1 RANGE 0.5, Table6 t6, t7 CLOSEST JOIN Tabela4 ON Tabela4.c1 NEAR t3.c1 STOP AFTER 5 JOIN Tabela5 ON Tabela5.c1 = t1.c1 WHERE t1.s1 NEAR ALL '/home/dataset/img.jpg' BY histograma STOP AFTER 3 AND t1.id > 10 AND t3.img FAR SUM '/home/dataset/img.jpg' RANGE 5 
+SELECT t1.dado d1, t2.dado d2 FROM t1 JOIN (SELECT * FROM t3 JOIN tabela5 t5 ON t3.id = t5.id WHERE t1.s1 NEAR ALL '/home/dataset/img.jpg' BY histograma STOP AFTER 3 AND t3.test > 10) t2 ON t1.a = t2.a RANGE JOIN Tabela3 t3 ON t3.c1 NEAR t1.c1 RANGE 0.5, Table6 t6, t7 CLOSEST JOIN Tabela4 ON Tabela4.c1 NEAR t3.c1 STOP AFTER 5 JOIN Tabela5 ON Tabela5.c1 = t1.c1 WHERE t1.s1 NEAR ALL '/home/dataset/img.jpg' BY histograma STOP AFTER 3 AND t1.id > 10 AND t3.img FAR SUM '/home/dataset/img.jpg' RANGE 5 
+SELECT t1.id, t2.id, t3.id FROM t1 JOIN (SELECT * FROM t1) ON t1.id = id WHERE abc = asd
+
