@@ -11,9 +11,10 @@ Additionally, the source code also provides a strategy for obtaining a default p
 
 ## Extended SQL commandos
 
-In all following constructs groups *[]* stand for optional terms.
+In all the following constructs, groups within *[]* are optional terms whereas names starting with @.
 
 **Create Metric Statement**
 
-    <metric-definition> ::=
+    <metric-definition> ::= CREATE METRIC <metric-name>
+                            [USING {Euclidean | <Your-m> } ]
 
