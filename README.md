@@ -11,10 +11,37 @@ Additionally, the source code also provides a strategy for obtaining a default p
 
 ## Extended SQL commandos
 
-In all the following constructs, groups within *[]* are optional terms whereas names starting with @.
+In all the following constructs, groups within *[]* are optional terms whereas names starting with *@* are user-defined types previously defined on SimbA data dictionary.
 
 **Create Metric Statement**
 
     <metric-definition> ::= CREATE METRIC <metric-name>
-                            [USING {Euclidean | <Your-m> } ]
+                            [USING {Euclidean | <@your-distance-function> }] FOR
+                            {STILLIMAGE '('<list-param-for-extractors>')' |
+                            @your-domain-type '('<list-param-for-extractors>')'}
+                            
+    <metric-name> ::= identifier
+    
+    <list-param-for-extractors> ::= <extractor-ref> |
+                                    <extractor-ref> ',' <list-param-for-extractors>
+                                    
+    <extractor-ref> ::= <extractor-name> ['(<list-ext-parameters>')']
+    
+    <extractor-name> ::= @your-extractor-name
+    
+    <list-ext-parameters> ::= <parameters-ref> |
+                              <parameters-ref> ',' <list-ext-parameters>
+                              
+    <parameters-ref> ::= <parameter-name> AS <alias-parameter> [<weight>] |
+                         <parameter-name> <alias-parameter> [<weight>]
+                         
+    <parameter-name> ::= @your-parameter-name
+    
+    <alias-parameter> ::= identifier
+    
+    <weight> ::= number
+    
+**Create Table Statement**
+    
+                            
 
