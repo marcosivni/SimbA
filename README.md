@@ -10,7 +10,7 @@ This repository includes the source code for extending SQL to support similarity
 Additionally, the source code also provides a strategy for obtaining a default parse-tree for SQL-extended statements to be further optimized according to proper heuristics and statistics.
 Metric indexes are provided by [Arboretum Library](https://bitbucket.org/gbdi/arboretum.git).
 
-## Extended SQL commandos
+## Extended SQL commands
 
 In all the following constructs, groups within *[]* are optional terms whereas names starting with *@* are user-defined types previously defined on SimbA data dictionary.
 
@@ -68,11 +68,20 @@ Clause REFERENCES only admits attributes of the same domain.
     
     
 **Create Index Statement** 
+
     
+    <index-definition> ::= CREATE INDEX <index-name> ON <table-name>
+                           { '('<attribute-name>')' [ REFERENCES '('<parameter-association-list>')'] }
+                           USING <metric-name> [DEFAULT]
     
+    <index-name> ::= identifier
     
+    <table-name> ::= identifier
     
-    
+
+**Select Statements**
+
+
     
     
     
