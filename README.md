@@ -149,7 +149,7 @@ the following commands represent a *3*-nearest neighbor query and a $0.5% range 
 The result set can be easily embedded on expert-customized applications, as the cgi *web* interface in the following figure.
 It includes a plain interface for the (A) exploration of the extended SQL expression, (B-C) visualization of both parse-tree and query-plan, and, (D) visualization of query-results.
 
-![][SimbA Example](/FigExampleReadme.png=900x568)
+![][SimbA Example](/FigExampleReadme.png)
 
 
           
