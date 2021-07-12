@@ -19,10 +19,6 @@ void ConsoleManager::printLogoLinux(){
     cout << endl;
     cout << " SIREN (R) Command Line Shell - January 2014 - Databases and Image Group" << endl;
     cout << "                     University of Sao Paulo -USP " << endl;
-    cout << "      Developed under scholarship grants of FAPESP, CAPES and CNPq" << endl;
-    cout << "        Distribution v2.0 by Marcos V N Bedo, William D Oliveira, " << endl;
-    cout << "                Luiz Olmes and Gabriel de Pierro." << endl;
-    cout << "     Supervisioned by Caetano Traina Jr., PhD and Agma J.Traina, PhD." << endl;
     cout << "                 See manual.txt for more information." << endl << endl << endl;
 }
 
@@ -31,10 +27,6 @@ void ConsoleManager::printLogoWindows(){
     cout << endl;
     cout << " SIREN (R) Command Line Shell - January 2014 - Databases and Image Group" << endl;
     cout << "                     University of Sao Paulo -USP " << endl;
-    cout << "      Developed under scholarship grants of FAPESP, CAPES and CNPq" << endl;
-    cout << "        Distribution v2.0 by Marcos V N Bedo, William D Oliveira, " << endl;
-    cout << "                Luiz Olmes and Gabriel de Pierro." << endl;
-    cout << "     Supervisioned by Caetano Traina Jr., PhD and Agma J.Traina, PhD." << endl;
     cout << "                 See manual.txt for more information." << endl << endl << endl;
 }
 
