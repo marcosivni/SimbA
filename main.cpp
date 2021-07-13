@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 
 //--- Shell stuff
 
-    QString hostname, username, password;
+    QString hostname, username, password, dbms;
     int port = -1;
     std::string pass;
     DatabaseManager *db;
@@ -45,8 +45,13 @@ int main(int argc, char *argv[])
                     port = QString(argv[x+1]).toInt();
                     x++;
                 } else {
-                    std::cout << "Invalid SIREN server setup. Exiting... \n" << std::endl;
-                    return 0;
+                    if ((aux.toUpper() == "-D") && (x+1 < argc)){
+                        dbms = QString(argv[x+1]);
+                        x++;
+                    } else{
+                        std::cout << "Invalid SIREN server setup. Exiting... \n" << std::endl;
+                        return 0;
+                    }
                 }
             }
         }
@@ -99,11 +104,15 @@ int main(int argc, char *argv[])
 
 
     try {
-        db = new DatabaseManager(hostname, username, password);
+        if (dbms.toUpper() == "MYSQL"){
+            db = new DatabaseManager(hostname, username, password, 3306, DatabaseManager::MYSQL);
+        } else {
+            db = new DatabaseManager(hostname, username, password);
+        }
     } catch (std::invalid_argument *e){
         std::cout << "Fatal error: " << e->what();
         delete (e);
-        return;
+        return 0;
     }
     if (db->openConnection()){
         std::cout << "DB connection opened." << std::endl;
