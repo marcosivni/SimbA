@@ -448,7 +448,22 @@ void SelectExecutor::regular_predicate(){
 
 //// <a> := SUM  | AVG | ALL | EVERY | ANY | MAX
 //// <t> := NEAR | FAR
-//// <similarity_predicate>  := DIVERSIFIED <t> <a> (subselect) BY <metric_name> STOP AFTER <k_nearest> WITH <tie_list>
+//// <similarity_predicate>  := DIVERSITY <t> <a> (subselect) BY <metric_name> STOP AFTER <k_nearest> WITH <tie_list>
+///                        | DIVERSITY <t> <a> (subselect) BY <metric_name> STOP AFTER <k_nearest>
+///                        | DIVERSITY <t> <a> (subselect) BY <metric_name>
+///                        | DIVERSITY <t> <a> (subselect)
+///                        | DIVERSITY <t> <a> (column_reference) BY <metric_name> STOP AFTER <k_nearest> WITH <tie_list>
+///                        | DIVERSITY <t> <a> (column_reference) BY <metric_name> STOP AFTER <k_nearest>
+///                        | DIVERSITY <t> <a> (column_reference) BY <metric_name>
+///                        | DIVERSITY <t> <a> (column_reference)
+///                        | DIVERSITY <t> <a> <query_obj_definition> BY <metric_name> STOP AFTER <k_nearest> WITH <tie_list>
+///                        | DIVERSITY <t> <a> <query_obj_definition> BY <metric_name> STOP AFTER <k_nearest>
+///                        | DIVERSITY <t> <a> <query_obj_definition> BY <metric_name>
+///                        | DIVERSITY <t> <a> <query_obj_definition>
+///                        | DIVERSITY <t> <a> (subselect) BY <metric_name> RANGE <val_range>
+///                        | DIVERSITY <t> <a> (column_reference) BY <metric_name> RANGE <val_range>
+///                        | DIVERSITY <t> <a> <query_obj_definition> BY <metric_name> RANGE <val_range>
+///                        | DIVERSIFIED <t> <a> (subselect) BY <metric_name> STOP AFTER <k_nearest> WITH <tie_list>
 ///                        | DIVERSIFIED <t> <a> (subselect) BY <metric_name> STOP AFTER <k_nearest>
 ///                        | DIVERSIFIED <t> <a> (subselect) BY <metric_name>
 ///                        | DIVERSIFIED <t> <a> (subselect)
@@ -480,7 +495,7 @@ void SelectExecutor::regular_predicate(){
 ///                        | <t> <a> <query_obj_definition> BY <metric_name> RANGE <val_range>
 void SelectExecutor::similarity_predicate(){
 
-    if (currentToken().toUpperLexem() == "DIVERSIFIED"){
+    if (currentToken().toUpperLexem() == "DIVERSIFIED" || currentToken().toUpperLexem() == "DIVERSITY"){
         getParser()->match(getParser()->getCurrentToken());
         getParser()->match(getParser()->getCurrentToken());
     } else {
@@ -891,10 +906,10 @@ void SelectExecutor::select_list(){
     }
 }
 
-ComplexResult* SelectExecutor::executeKNN(IndexManager *idx, size_t *tokenInitialPosition, SimilaritySelectionAggregation aggPattern, SimilaritySelectionSearchType searchType, FeatureVector center, FeatureVectorList centers){
+ComplexResultList SelectExecutor::executeKNN(IndexManager *idx, size_t *tokenInitialPosition, SimilaritySelectionAggregation aggPattern, SimilaritySelectionSearchType searchType, FeatureVector center, FeatureVectorList centers){
 
 
-    ComplexResult* resultSet = nullptr;
+    ComplexResultList resultSet;
     bool tie = false;
 
     *tokenInitialPosition += 2;
@@ -908,8 +923,8 @@ ComplexResult* SelectExecutor::executeKNN(IndexManager *idx, size_t *tokenInitia
 
     switch (searchType){
 
-    case DiversifiedNear:
-        if (centers.size() > 0){
+    case DiversityNear:
+        if (centers.size()){
             switch (aggPattern){
             case MAX:
                 resultSet = idx->nearestMaxSelectQuery(centers, centers.size(), k, tie);
@@ -920,16 +935,14 @@ ComplexResult* SelectExecutor::executeKNN(IndexManager *idx, size_t *tokenInitia
             case ALL:
                 resultSet = idx->nearestAllSelectQuery(centers, centers.size(), k, tie);
                 break;
-            default:
-                resultSet = nullptr;
             };
             break;
         } else {
-            //resultSet = idx->diverseNearestQuery(&center, k);
+            resultSet = idx->diverseNearestQuery(&center, k);
         }
 
-    case DiversifiedFar:
-        if (centers.size() > 0){
+    case DiversityFar:
+        if (centers.size()){
             switch (aggPattern){
             case MAX:
                 resultSet = idx->farthestMaxSelectQuery(centers, centers.size(), k, tie);
@@ -940,8 +953,42 @@ ComplexResult* SelectExecutor::executeKNN(IndexManager *idx, size_t *tokenInitia
             case ALL:
                 resultSet = idx->farthestAllSelectQuery(centers, centers.size(), k, tie);
                 break;
-            default:
-                resultSet = nullptr;
+            };
+            break;
+        } else {
+            resultSet = idx->farthestSelectQuery(&center, k, tie);
+        }
+
+    case DiversifiedNear:
+        if (centers.size()){
+            switch (aggPattern){
+            case MAX:
+                resultSet = idx->nearestMaxSelectQuery(centers, centers.size(), k, tie);
+                break;
+            case SUM:
+                resultSet = idx->nearestSumSelectQuery(centers, centers.size(), k, tie);
+                break;
+            case ALL:
+                resultSet = idx->nearestAllSelectQuery(centers, centers.size(), k, tie);
+                break;
+            };
+            break;
+        } else {
+            resultSet = idx->diverseNearestQuery(&center, k, k);
+        }
+
+    case DiversifiedFar:
+        if (centers.size()){
+            switch (aggPattern){
+            case MAX:
+                resultSet = idx->farthestMaxSelectQuery(centers, centers.size(), k, tie);
+                break;
+            case SUM:
+                resultSet = idx->farthestSumSelectQuery(centers, centers.size(), k, tie);
+                break;
+            case ALL:
+                resultSet = idx->farthestAllSelectQuery(centers, centers.size(), k, tie);
+                break;
             };
             break;
         } else {
@@ -960,8 +1007,6 @@ ComplexResult* SelectExecutor::executeKNN(IndexManager *idx, size_t *tokenInitia
             case ALL:
                 resultSet = idx->farthestAllSelectQuery(centers, centers.size(), k, tie);
                 break;
-            default:
-                resultSet = nullptr;
             };
             break;
         } else {
@@ -981,8 +1026,6 @@ ComplexResult* SelectExecutor::executeKNN(IndexManager *idx, size_t *tokenInitia
             case ALL:
                 resultSet = idx->nearestAllSelectQuery(centers, centers.size(), k, tie);
                 break;
-            default:
-                resultSet = nullptr;
             };
             break;
         } else {
@@ -993,15 +1036,51 @@ ComplexResult* SelectExecutor::executeKNN(IndexManager *idx, size_t *tokenInitia
     return resultSet;
 }
 
-ComplexResult* SelectExecutor::executeRange(IndexManager *idx, size_t *tokenInitialPosition, SimilaritySelectionAggregation aggPattern, SimilaritySelectionSearchType searchType, FeatureVector center, FeatureVectorList centers){
+ComplexResultList SelectExecutor::executeRange(IndexManager *idx, size_t *tokenInitialPosition, SimilaritySelectionAggregation aggPattern, SimilaritySelectionSearchType searchType, FeatureVector center, FeatureVectorList centers){
 
-    ComplexResult* resultSet = nullptr;
+    ComplexResultList resultSet;
 
     *tokenInitialPosition += 1;
     double range = atof(getParser()->getToken(*tokenInitialPosition)->getLexem().c_str());
     *tokenInitialPosition += 1;
 
     switch (searchType){
+
+    case DiversityNear:
+        if (centers.size() > 0){
+            switch (aggPattern){
+            case MAX:
+           //     resultSet = idx->nearestMaxSelectQuery(centers, centers.size(), k, tie);
+                break;
+            case SUM:
+          //      resultSet = idx->nearestSumSelectQuery(centers, centers.size(), k, tie);
+                break;
+            case ALL:
+            //    resultSet = idx->nearestAllSelectQuery(centers, centers.size(), k, tie);
+                break;
+            };
+            break;
+        } else {
+            //resultSet = idx->diverseNearestQuery(&center, k);
+        }
+
+    case DiversityFar:
+        if (centers.size() > 0){
+            switch (aggPattern){
+            case MAX:
+               // resultSet = idx->farthestMaxSelectQuery(centers, centers.size(), k, tie);
+                break;
+            case SUM:
+               // resultSet = idx->farthestSumSelectQuery(centers, centers.size(), k, tie);
+                break;
+            case ALL:
+               // resultSet = idx->farthestAllSelectQuery(centers, centers.size(), k, tie);
+                break;;
+            };
+            break;
+        } else {
+            //resultSet = idx->farthestSelectQuery(&center, k, tie);
+        }
 
     case DiversifiedNear:
         if (centers.size() > 0){
@@ -1015,8 +1094,6 @@ ComplexResult* SelectExecutor::executeRange(IndexManager *idx, size_t *tokenInit
             case ALL:
                 resultSet = idx->rangeAllSelectQuery(centers, centers.size(), range);
                 break;
-            default:
-                resultSet = nullptr;
             };
             break;
         } else {
@@ -1034,8 +1111,6 @@ ComplexResult* SelectExecutor::executeRange(IndexManager *idx, size_t *tokenInit
             case ALL:
                 resultSet = idx->reverseRangeAllSelectQuery(centers, centers.size(), range);
                 break;
-            default:
-                resultSet = nullptr;
             };
             break;
         } else {
@@ -1053,8 +1128,6 @@ ComplexResult* SelectExecutor::executeRange(IndexManager *idx, size_t *tokenInit
             case ALL:
                 resultSet = idx->reverseRangeAllSelectQuery(centers, centers.size(), range);
                 break;
-            default:
-                resultSet = nullptr;
             };
             break;
         } else {
@@ -1073,8 +1146,6 @@ ComplexResult* SelectExecutor::executeRange(IndexManager *idx, size_t *tokenInit
             case ALL:
                 resultSet = idx->rangeAllSelectQuery(centers, centers.size(), range);
                 break;
-            default:
-                resultSet = nullptr;
             };
             break;
         } else {
@@ -1085,7 +1156,7 @@ ComplexResult* SelectExecutor::executeRange(IndexManager *idx, size_t *tokenInit
     return resultSet;
 }
 
-void SelectExecutor::updateTokenList(size_t *begin, size_t *currentPosition, std::string tableAlias, std::string attribute, std::vector<std::string> rowIds, bool vTable){
+void SelectExecutor::updateTokenList(size_t *begin, size_t *currentPosition, std::string tableAlias, std::string attribute, std::vector<std::string> rowIds, SimilaritySelectionSearchType searchType, bool vTable){
 
     Token *t = nullptr;
     std::vector<Token *> tList;
@@ -1096,14 +1167,22 @@ void SelectExecutor::updateTokenList(size_t *begin, size_t *currentPosition, std
         getParser()->removeToken(*begin);
     }
     //Insere tokens SQL padrao
-    t = new Token(tableAlias, Token::TK_IDENTIFIER, Lexical::LK_UNDEFINED);
-    tList.push_back(t);
-    t = new Token(".", Token::TK_PERIOD, Lexical::LK_UNDEFINED);
-    tList.push_back(t);
-    if (vTable){
-        t = new Token(attribute + "_id", Token::TK_IDENTIFIER, Lexical::LK_UNDEFINED);
+    if (searchType == SimilaritySelectionSearchType::DiversifiedNear || searchType == SimilaritySelectionSearchType::DiversifiedFar){
+        if (vTable){
+            t = new Token( "(" + attribute + "_id, " + attribute + "$bridge)" , Token::TK_IDENTIFIER, Lexical::LK_UNDEFINED);
+        } else {
+            t = new Token("(" + attribute + ", " + attribute + "$bridge)", Token::TK_IDENTIFIER, Lexical::LK_UNDEFINED);
+        }
     } else {
-        t = new Token(attribute, Token::TK_IDENTIFIER, Lexical::LK_UNDEFINED);
+        t = new Token(tableAlias, Token::TK_IDENTIFIER, Lexical::LK_UNDEFINED);
+        tList.push_back(t);
+        t = new Token(".", Token::TK_PERIOD, Lexical::LK_UNDEFINED);
+        tList.push_back(t);
+        if (vTable){
+            t = new Token(attribute + "_id", Token::TK_IDENTIFIER, Lexical::LK_UNDEFINED);
+        } else {
+            t = new Token(attribute, Token::TK_IDENTIFIER, Lexical::LK_UNDEFINED);
+        }
     }
     tList.push_back(t);
     t = new Token("IN", Token::TK_IN, Lexical::LK_UNDEFINED);
@@ -1160,7 +1239,7 @@ void SelectExecutor::transformSimilarityIntoRegularSQL(){
     //Nome base para arquivo de indice
     std::string idxName;
     //Resultado da consulta obtido do metodo de acesso
-    ComplexResult *resultSet = nullptr;
+    ComplexResultList resultSet;
     //Lista de id elementos dentro do resultado obtido do metodo de acesso
     std::vector<std::string> rowIds;
     //Posicao do inicio da fila de tokens onde ha selecao por similaridade
@@ -1212,20 +1291,30 @@ void SelectExecutor::transformSimilarityIntoRegularSQL(){
             //Verifica se o operador e por diversidade e proximidade
             if ((getParser()->getToken(x)->toUpperLexem() == "NEAR") ||
                     (getParser()->getToken(x)->toUpperLexem() == "FAR") ||
-                    (getParser()->getToken(x)->toUpperLexem() == "DIVERSIFIED")){
+                    (getParser()->getToken(x)->toUpperLexem() == "DIVERSIFIED") ||
+                    (getParser()->getToken(x)->toUpperLexem() == "DIVERSITY")){
 
                 if (getParser()->getToken(x)->toUpperLexem() == "DIVERSIFIED"){
+                    x++;
                     if (getParser()->getToken(x)->toUpperLexem() == "NEAR"){
                         searchType = SimilaritySelectionSearchType::DiversifiedNear;
                     } else {
                         searchType = SimilaritySelectionSearchType::DiversifiedFar;
                     }
-                    x++;
                 } else {
-                    if (getParser()->getToken(x)->toUpperLexem() == "NEAR"){
-                        searchType = SimilaritySelectionSearchType::Near;
+                    if (getParser()->getToken(x)->toUpperLexem() == "DIVERSITY"){
+                        x++;
+                        if (getParser()->getToken(x)->toUpperLexem() == "NEAR"){
+                            searchType = SimilaritySelectionSearchType::DiversityNear;
+                        } else {
+                            searchType = SimilaritySelectionSearchType::DiversityFar;
+                        }
                     } else {
-                        searchType = SimilaritySelectionSearchType::Far;
+                        if (getParser()->getToken(x)->toUpperLexem() == "NEAR"){
+                            searchType = SimilaritySelectionSearchType::Near;
+                        } else {
+                            searchType = SimilaritySelectionSearchType::Far;
+                        }
                     }
                 }
                 x++;
@@ -1341,16 +1430,11 @@ void SelectExecutor::transformSimilarityIntoRegularSQL(){
                     idxName = "temp_" + tableAlias + "_" + attributeAlias + "_" + QString::number(x).toStdString();
                 }
 
-
-//                std::cout << vTable << "-" << tableName << "-" << tableAlias << "-" << attributeName << "-" << attributeAlias << "-" << caTable << "-" << cAttribute << std::endl;
-//                std::cout << "metric code " << metricCode << " idx name " << idxName << std::endl;
-
                 //--- Aborta execucao para evitar problemas na Arboretum
                 if (distanceCode.empty()){
                     throw new std::runtime_error("Invalid metric code.");
                 }
                 //--- Aborta execucao para evitar problemas na Arboretum
-
 
                 eval = new MetricDistanceFunction(QString::fromStdString(distanceCode).toInt());
                 idx = new IndexManager(idxName, *eval, vTable, IndexManager::PAGE_SIZE);
@@ -1378,13 +1462,77 @@ void SelectExecutor::transformSimilarityIntoRegularSQL(){
 
                 //--- Inicio da substituicao da selecao por similaridade para selecao com clausula IN ---
                 //Recupera os 'rowids' retornados pelo metodo de acesso e os coloca em uma lista
-                if (resultSet != nullptr){
-                    for (size_t m = 0; m < resultSet->GetNumOfEntries(); m++){
-                        FeatureVector *qq = (FeatureVector *)  ((*resultSet)[m].GetObject());
-                        rowIds.push_back(QString::number(qq->getOID()).toStdString());
+                if (resultSet.size()){
+                    if (searchType == SimilaritySelectionSearchType::Near || searchType == SimilaritySelectionSearchType::Far){
+                        for (size_t m = 0; m < resultSet[0]->GetNumOfEntries(); m++){
+                            FeatureVector *qq = (FeatureVector *)  ((*resultSet[0])[m].GetObject());
+                            rowIds.push_back(QString::number(qq->getOID()).toStdString());
+                        }
+                    } else {
+                        if (searchType == SimilaritySelectionSearchType::DiversityNear || searchType == SimilaritySelectionSearchType::DiversityFar){
+                            for (size_t m = 0; m < resultSet.size(); m++){
+                                if (resultSet[m] != nullptr){
+                                    FeatureVector *qq = (FeatureVector *)  ((*resultSet[m])[0].GetObject());
+                                    rowIds.push_back(QString::number(qq->getOID()).toStdString());
+                                }
+                            }
+                        } else {
+                            //---- Inicio adicionar produto cartesiano com tabela original renomeada ...$bridge
+                            size_t xAdd = 0;
+                            while (xAdd < getParser()->countTokens() && !isWhereGroupOrderWord(getParser()->getToken(xAdd)->toUpperLexem())){
+                                xAdd++;
+                            }
+                            std::vector<Token *> tListAdd;
+                            Token *t;
+                            t = new Token(",", Token::TK_COMMA, Lexical::LK_UNDEFINED);
+                            tListAdd.push_back(t);
+                            t = new Token(caTable, Token::TK_IDENTIFIER, Lexical::LK_UNDEFINED);
+                            tListAdd.push_back(t);
+                            t = new Token("AS", Token::TK_UNDEFINED, Lexical::LK_UNDEFINED);
+                            tListAdd.push_back(t);
+                            t = new Token(tableAlias + "$bridge", Token::TK_IDENTIFIER, Lexical::LK_UNDEFINED);
+                            tListAdd.push_back(t);
+                            getParser()->insertTokenList(tListAdd, xAdd);
+                            //---- Fim adicionar produto cartesiano com tabela original renomeada ...$bridge
+
+                            //---- Inicio adicionar projecao atributo por similaridade como ...$bridge
+                            tListAdd.clear();
+                            xAdd = 0;
+                            while (xAdd < getParser()->countTokens() && getParser()->getToken(xAdd)->toUpperLexem() != "FROM"){
+                                xAdd++;
+                            }
+                            t = new Token(",", Token::TK_COMMA, Lexical::LK_UNDEFINED);
+                            tListAdd.push_back(t);
+                            t = new Token(tableAlias + "$bridge", Token::TK_IDENTIFIER, Lexical::LK_UNDEFINED);
+                            tListAdd.push_back(t);
+                            t = new Token(".", Token::TK_PERIOD, Lexical::LK_UNDEFINED);
+                            tListAdd.push_back(t);
+                            t = new Token(cAttribute, Token::TK_IDENTIFIER, Lexical::LK_UNDEFINED);
+                            tListAdd.push_back(t);
+                            t = new Token("AS", Token::TK_UNDEFINED, Lexical::LK_UNDEFINED);
+                            tListAdd.push_back(t);
+                            t = new Token(attributeAlias + "$bridge", Token::TK_IDENTIFIER, Lexical::LK_UNDEFINED);
+                            tListAdd.push_back(t);
+                            getParser()->insertTokenList(tListAdd, xAdd);
+                            //---- Fim adicionar projecao atributo por similaridade como ...$bridge
+
+                            //Update metadata for further calls
+                            metadata->add(caTable, tableAlias + "$bridge", cAttribute, attributeAlias + "$bridge", caTable, cAttribute);
+
+                            //Create [double] in list
+                            for (size_t m = 0; m < resultSet.size(); m++){
+                                for (size_t n = 1; n < resultSet[m]->GetNumOfEntries(); n++){
+                                    FeatureVector *qq = (FeatureVector *)  ((*resultSet[m])[0].GetObject());
+                                    FeatureVector *qp = (FeatureVector *)  ((*resultSet[m])[n].GetObject());
+                                    rowIds.push_back(" (" + QString::number(qq->getOID()).toStdString() + "," + QString::number(qp->getOID()).toStdString() +") ");
+                                }
+                            }
+                        }
+
                     }
                 }
-                updateTokenList(&pos, &x, tableAlias, attributeAlias, rowIds, vTable);
+
+                updateTokenList(&pos, &x, tableAlias, attributeAlias, rowIds, searchType, vTable);
                 if ((vTable) && (idx != nullptr)){
                     idx->dropDummyTree();
                 }
@@ -1396,9 +1544,14 @@ void SelectExecutor::transformSimilarityIntoRegularSQL(){
             centers.clear();
             idxName.clear();
 
-            if (resultSet != nullptr){
-                delete (resultSet);
+            for (size_t x = 0; x < resultSet.size(); x++){
+                if (resultSet[x] != nullptr){
+                    delete resultSet[x];
+                    resultSet[x] = nullptr;
+                }
             }
+            resultSet.clear();
+
             if (eval != nullptr){
                 delete (eval);
             }
