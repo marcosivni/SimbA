@@ -1,97 +1,122 @@
-//Internal includes
-#include <SetupManager.hpp>
-#include <ConsoleManager.hpp>
-#include <DatabaseManager.hpp>
+#include <QCoreApplication>
+//#include <QLocale>
+//#include <QTranslator>
 
-//Agathon includes
-#include <ComplexSQLExecutor.hpp>
-#include <SyntacticComplexSQLAnalyzer.hpp>
 
-using namespace std;
+//#include <ServerGUI.h>
+#include <SirenShell.h>
+#include <ConsoleManager.h>
 
-int main(int argc, char* argv[]){
+int main(int argc, char *argv[])
+{
+    QCoreApplication a(argc, argv);
 
-    ConsoleManager console;
-    ParseTreeFactory factory;
+////--- GUI stuff
+////    QTranslator translator;
+////    const QStringList uiLanguages = QLocale::system().uiLanguages();
+////    for (const QString &locale : uiLanguages) {
+////        const QString baseName = "Siren-Server_" + QLocale(locale).name();
+////        if (translator.load(":/i18n/" + baseName)) {
+////            a.installTranslator(&translator);
+////            break;
+////        }
+////    }
+//    ServerGUI w;
+//    w.show();
 
-    string input;
-    SetupManager *options = NULL;
+//--- Shell stuff
 
-    //Set argc, argv
-    bool login = false;
-    while (!login){
-        if (options != NULL){
-            delete (options);
-        }
-        try{
-            options = new SetupManager(argc, argv);
-            login = true;
-        } catch (std::string *tp){
-            delete (tp);
-            return 0;
-        } catch (...){
-            argc = 1;
-            cout << "Invalid data to database connection. Try again." << endl;
-        }
-    }
+    QString hostname, username, password;
+    int port = -1;
+    std::string pass;
+    DatabaseManager *db;
 
-    try{
-        DatabaseManager *db = options->newDBMSInstance();
-
-        console.printLogo();
-
-        while (1){
-            input.clear();
-            input = console.readStatement();
-
-            Parser *parser = new Parser(input);
-
-            if ((parser->countTokens() == 1) && (parser->getToken(0)->toUpperLexem() == "CLEAR")){
-                console.clear();
+    for (int x = 1; x < argc; x++){
+        QString aux = argv[x];
+        if ((aux.toUpper() == "-H") && (x+1 < argc)){
+            hostname = argv[x+1];
+            x++;
+        } else {
+            if ((aux.toUpper() == "-U") && (x+1 < argc)){
+                username = argv[x+1];
+                x++;
             } else {
-                if ((parser->countTokens() == 1) && (parser->getToken(0)->toUpperLexem() == "EXIT")){
-                    console.commit(db);
-                    delete (db);
-                    console.close();
-                    delete (options);
-                    return 0;
+                if ((aux.toUpper() == "-P") && (x+1 < argc)){
+                    port = QString(argv[x+1]).toInt();
+                    x++;
                 } else {
-                    SyntacticComplexSQLAnalyzer *analyzer = new SyntacticComplexSQLAnalyzer(input, db);
-                    if (analyzer->isValid()){
-
-                        ComplexSQLExecutor *executor = new ComplexSQLExecutor(input, db);
-                        vector<string> sql = executor->translate();
-
-                        if ((analyzer->isSelect()) || (analyzer->isDCL())){
-                            if ((analyzer->isSelect()) && (options->printParseTree())){
-                                console.printParseTree(factory.canonicalParseTree(input));
-                            }
-                            for (int k = 0; k < sql.size(); k++){
-                                console.printResultQuery(db, sql[k], options->printTranslatedSQL());
-                            }
-                        } else {
-                            console.printResultQuery(db, sql, options->printTranslatedSQL());
-                        }
-                        delete (executor);
-                    } else {
-                        console.printError(analyzer->getErrors());
-                    }
-                    delete (analyzer);
-
+                    std::cout << "Invalid SIREN server setup. Exiting... \n" << std::endl;
+                    return 0;
                 }
             }
-
-            delete (parser);
-
         }
-    } catch (...) {
-        cout << "Invalid parameters specification for DBMS connection. Try again." << endl;
-        delete (options);
     }
 
-    return 0;
+    if (hostname.isEmpty()){
+        std::string aux;
+        std::cout << "Hostname: ";
+        std::cin >> aux;
+        hostname.fromStdString(aux);
+    }
+
+    if (username.isEmpty()){
+        std::string aux;
+        std::cout << "User: ";
+        std::cin >> aux;
+        username.fromStdString(aux);
+    }
+
+    if (port == -1){
+        std::string aux;
+        std::cout << "Port: ";
+        std::cin >> aux;
+        port = QString::fromStdString(aux).toInt();
+    }
+
+    std::cout << "Password: ";
+    char ch = (char) ConsoleManager::upDownArrowOrRegularChar();
+    while (ch != '\n'){
+        if (!((ch == 8) || (ch == 127))){
+            pass += ch;
+            std::cout << "*";
+        } else {
+            if (pass.size() > 0){
+                std::cout << '\b';
+                std::cout << " ";
+                std::cout << '\b';
+                std::string aux;
+                for (size_t x = 0; x < pass.size()-1; x++){
+                    aux += pass[x];
+                }
+                pass.clear();
+                pass = aux;
+            }
+        }
+        ch = (char) ConsoleManager::upDownArrowOrRegularChar();
+    }
+    std::cout << std::endl;
+    password.fromStdString(pass);
+
+
+    try {
+        db = new DatabaseManager(hostname, username, password);
+    } catch (std::invalid_argument *e){
+        std::cout << "Fatal error: " << e->what();
+        delete (e);
+        return;
+    }
+    if (db->openConnection()){
+        std::cout << "DB connection opened." << std::endl;
+    } else {
+        std::cout << "Can't establish the DB connection. " << std::endl;
+        return 0;
+    }
+
+    QHostAddress address;
+    address.setAddress(hostname);
+
+    SirenShell shell(db, address, port);
+    shell.startTcpServer();
+
+    return a.exec();
 }
-
-
-
-
