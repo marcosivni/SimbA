@@ -348,95 +348,60 @@ class stDummyTree: public stMetricTree<ObjectType, EvaluatorType>{
 
       std::vector < stResult<ObjectType> * > diverseBRIDGEQuery(tObject * sample, u_int32_t k){
 
-       tResult * resultNN;
-       tResult * newresult;
-       double range;
-       double dist2inf;
-       bool dominant;
-       u_int32_t limit;
-       u_int32_t j;
-       u_int32_t infcontrol;
+          tResult *globalNN;
+          tResult *bridgeList;
+          std::vector < stResult<ObjectType> * > answer;
 
-       std::vector <size_t> positions;
-       std::vector <std::vector <size_t> > influenced;
-       std::vector <tResult *> final;
+          //Sort candidates
+          globalNN = new tResult();
+          globalNN->SetQueryInfo(sample->Clone(), RANGEQUERY, -1, DBL_MAX, false);
+          globalNN = this->RangeQuery(sample->Clone(), DBL_MAX); //sorted list by distance
+          //Stops if dataset is empty
+          if (!globalNN->GetNumOfEntries()){
+              return answer;
+          }
+          //Insert the closest element in the result set and creates a list of influenced elements for it
+          bridgeList = new tResult();
+          bridgeList->SetQueryInfo(sample->Clone(), KNEARESTQUERY, 0, 0.0, false);
+          bridgeList->AddPair( ((ObjectType *) (*globalNN)[0].GetObject())->Clone(), (*globalNN)[0].GetDistance() );
+          answer.push_back(bridgeList);
+          //Examine every other (sorted) candidate
+          for (size_t j = 1; j < globalNN->GetNumOfEntries(); j++){
+              double dOjOq = this->myMetricEvaluator->GetDistance(sample, (ObjectType *) (*globalNN)[j].GetObject());
+              size_t closestInfluent = 0;
+              double minDistToInfluent = DBL_MAX;
+              bool influenced = false;
+              //Build the strong influence sets
+              for (size_t i = 0; i < answer.size(); i++){
+                  double dOiOj =  this->myMetricEvaluator->GetDistance((ObjectType *) (*answer.at(i))[0].GetObject(), (ObjectType *) (*globalNN)[j].GetObject());
+                  double dOiOq = this->myMetricEvaluator->GetDistance(sample, (ObjectType *) (ObjectType *) (*answer.at(i))[0].GetObject());
+                  if ( ((1/dOiOj) >= (1/dOiOq)) && ((1/dOiOj) >= (1/dOjOq))){ //Second condition for sanity check
+                      influenced = true;
+                      if (minDistToInfluent > dOiOj){
+                          minDistToInfluent = dOiOj;
+                          closestInfluent = i;
+                      }
+                  }
+              }
 
-       //Define a bigger ratio to retrieve the entire dataset
-       range = DBL_MAX;
+              if (!influenced){
+                  if (answer.size() == k){
+                      //Force break
+                      break;
+                  } else {
+                      bridgeList = new tResult();
+                      bridgeList->SetQueryInfo(sample->Clone(), KNEARESTQUERY, 0, 0.0, false);
+                      bridgeList->AddPair( ((ObjectType *) (*globalNN)[j].GetObject())->Clone(), dOjOq );
+                      answer.push_back(bridgeList);
+                  }
+              } else {
+                  bridgeList = answer[closestInfluent];
+                  bridgeList->SetQueryInfo(sample->Clone(), KNEARESTQUERY, 0, 0.0, false);
+                  bridgeList->AddPair( ((ObjectType *) (*globalNN)[j].GetObject())->Clone(), minDistToInfluent );
+              }
+          }
 
-       // Create Nearest result
-       resultNN = new tResult();
-       resultNN->SetQueryInfo(sample->Clone(), RANGEQUERY, -1, range, false);
-
-       resultNN = this->RangeQuery(sample->Clone(), DBL_MAX); //sorted list by distance
-       limit = resultNN->GetNumOfEntries();
-
-       //initiate the vector of influenced vectors with k+1, but remember the query is only until k influenced element!
-       //This is a special case, as we need to set influenced elements to the kth dominant
-       influenced.resize(k+1);
-
-       //Get the 1-NN when the list is empty
-       if (positions.empty())
-           positions.push_back(0);
-
-
-       //let's iterate the Ordered list applying the influence concept
-       for (size_t i = 1; i < limit; i++){
-
-           dist2inf = DBL_MAX;
-           dominant = true;
-           infcontrol = 0;
-
-           for ( j = (positions.size()); j > 0; j--){
-               double DivDistance = this->myMetricEvaluator->getDiversity(((ObjectType *) ((*resultNN)[i].GetObject())), ((ObjectType *) ((*resultNN)[positions.at(j-1)].GetObject())));
-               double InfDistance = (*resultNN)[positions.at(j-1)].GetDistance();
-               double InfTempDistance = (*resultNN)[i].GetDistance();
-
-               // check the distance from the candidate to Sr(element already insert into result) is higher than distance from Sr to sample
-               if(DivDistance <= InfDistance && DivDistance <= InfTempDistance){
-                   dominant = false;
-                   if(DivDistance < dist2inf){
-                       dist2inf = DivDistance;
-                       infcontrol = (j-1);
-                   }
-               }
-       }
-
-           //Insert element if the candidate is higher than all elements in result
-           if(dominant){
-               positions.push_back(i);
-           }else{
-               influenced.at(infcontrol).push_back(i);
-           }
-
-           // stop if you already get all elements you need (you retrieve one more just to set the influenced to the kth dominant
-           if(positions.size() == k+1)
-               break;
-       }
-
-
-       for (size_t z = 0; z < positions.size()-1; z++){
-           newresult = new tResult(); // Create result
-           newresult->SetQueryInfo(sample->Clone(), KNEARESTQUERY, k, 0.0, false);
-           newresult->AddPair( ((ObjectType *) (*resultNN)[positions.at(z)].GetObject())->Clone(), 0.0);
-           for(size_t t = 0; t < influenced.at(z).size(); t++){
-               newresult->AddPair( ((ObjectType *) (*resultNN)[influenced.at(z).at(t)].GetObject())->Clone(),
-                       this->myMetricEvaluator->getDiversity(((ObjectType *) ((*resultNN)[influenced.at(z).at(t)].GetObject())), ((ObjectType *) ((*resultNN)[positions.at(z)].GetObject()))));
-           }
-
-           final.push_back(newresult);
-
-       }
-       positions.clear();
-       for (size_t x = 0; x < influenced.size(); x++){
-           influenced[x].clear();
-       }
-       influenced.clear();
-
-       delete (resultNN);
-       //delete (newresult);
-
-       return final;
+          return answer;
       }
 
       /**

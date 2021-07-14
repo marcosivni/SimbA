@@ -628,9 +628,10 @@ ComplexResultList IndexManager::diverseNearestQuery(FeatureVector* center, u_int
     resultSet = dummyTree->diverseBRIDGEQuery(center, k1);
     for (size_t x = 0; x < resultSet.size(); x++){
         tmpResult = resultSet[x];
-        while (((tmpResult->GetNumOfEntries() - 1) > k2)){
+        while (tmpResult->GetNumOfEntries() > k2){
             tmpResult->RemoveLast();
         }
     }
+
     return resultSet;
 }
